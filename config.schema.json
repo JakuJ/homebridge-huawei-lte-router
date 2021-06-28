@@ -1,6 +1,6 @@
 {
-  "pluginAlias": "Huawei",
-  "pluginType": "platform",
+  "pluginAlias": "Huawei B535",
+  "pluginType": "accessory",
   "singular": true,
   "schema": {
     "type": "object",
