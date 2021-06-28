@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "Huawei B535",
+  "pluginAlias": "Huawei LTE Router",
   "pluginType": "accessory",
   "singular": true,
   "schema": {
@@ -9,7 +9,13 @@
         "title": "name",
         "type": "string",
         "required": true,
-        "default": "Huawei B535 Router"
+        "default": "Huawei LTE Router"
+      },
+      "password": {
+        "title": "password",
+        "type": "string",
+        "required": true,
+        "default": "admin"
       }
     }
   }

@@ -1,16 +1,16 @@
 {
   "private": true,
-  "displayName": "Homebridge Huawei B535",
-  "name": "homebridge-plugin-huawei-b535",
+  "displayName": "Homebridge Huawei LTE Router",
+  "name": "homebridge-plugin-huawei-lte-router",
   "version": "1.0.0",
-  "description": "A Homebridge plugin for automating the Huawei B535 router.",
+  "description": "A Homebridge plugin for automating Huawei LTE routers.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/JakuJ/homebridge-plugin-huawei-b535.git"
+    "url": "git://github.com/JakuJ/homebridge-plugin-huawei-lte-router.git"
   },
   "bugs": {
-    "url": "https://github.com/JakuJ/homebridge-plugin-huawei-b535/issues"
+    "url": "https://github.com/JakuJ/homebridge-plugin-huawei-lte-router/issues"
   },
   "engines": {
     "node": ">=10.17.0",
@@ -26,7 +26,9 @@
   "keywords": [
     "homebridge-plugin"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "huawei-lte-api": "^0.0.4"
+  },
   "devDependencies": {
     "@types/node": "^14.14.31",
     "@typescript-eslint/eslint-plugin": "^4.16.1",

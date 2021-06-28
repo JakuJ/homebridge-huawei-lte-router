@@ -10,24 +10,27 @@ import {
   Logging,
   Service
 } from "homebridge";
+import { connect } from "./router";
 
 let hap: HAP;
 
 export = (api: API) => {
   hap = api.hap;
-  api.registerAccessory("Huawei B535", HuaweiB535);
+  api.registerAccessory("Huawei LTE Router", Router);
 };
 
-class HuaweiB535 implements AccessoryPlugin {
+class Router implements AccessoryPlugin {
 
   private readonly log: Logging;
   private readonly name: string;
+  private readonly config: AccessoryConfig;
 
   private readonly switchService: Service;
   private readonly informationService: Service;
 
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
+    this.config = config;
     this.name = config.name;
 
     this.switchService = new hap.Service.Switch(this.name);
@@ -43,8 +46,8 @@ class HuaweiB535 implements AccessoryPlugin {
 
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, "Huawei")
-      .setCharacteristic(hap.Characteristic.Model, "B535")
-      .setCharacteristic(hap.Characteristic.SerialNumber, "???");
+      .setCharacteristic(hap.Characteristic.Model, "Dummy model") // TODO
+      .setCharacteristic(hap.Characteristic.SerialNumber, "Dummy number"); // TODO
 
     log.info("Router finished initializing!");
   }
@@ -55,6 +58,7 @@ class HuaweiB535 implements AccessoryPlugin {
 
     if (!switchOn) {
       // TODO: Restart the router
+      connect(this.config.password);
     }
     
     callback();
