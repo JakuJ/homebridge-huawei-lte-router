@@ -28,7 +28,8 @@
   ],
   "dependencies": {
     "async-mutex": "^0.3.1",
-    "huawei-lte-api": "^0.0.4"
+    "huawei-lte-api": "^0.0.4",
+    "is-online": "^9.0.1"
   },
   "devDependencies": {
     "@types/node": "^14.14.31",

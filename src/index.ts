@@ -6,18 +6,19 @@ import {
   CharacteristicValue,
   HAP,
   Logging,
-  Service
-} from "homebridge";
+  Service,
+} from 'homebridge';
 
-import { Device } from "huawei-lte-api";
-import { connect } from "./router";
-import {Mutex, MutexInterface, Semaphore, SemaphoreInterface, withTimeout} from 'async-mutex';
+import { Device } from 'huawei-lte-api';
+import { connect } from './router';
+import { Mutex } from 'async-mutex';
+import isOnline from 'is-online';
 
 let hap: HAP;
 
 export = async (api: API) => {
   hap = api.hap;
-  api.registerAccessory("Huawei LTE Router", Router);
+  api.registerAccessory('Huawei LTE Router', Router);
 };
 
 class Router implements AccessoryPlugin {
@@ -25,14 +26,15 @@ class Router implements AccessoryPlugin {
   private readonly log: Logging;
   private readonly name: string;
   private readonly config: AccessoryConfig;
-  
+
   private device: Device | null = null;
   private info: Record<string, unknown> | null = null;
   private readonly mutex: Mutex;
-  
+
   private readonly switchService: Service;
   private informationService: Service;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.config = config;
@@ -41,10 +43,9 @@ class Router implements AccessoryPlugin {
 
     this.switchService = new hap.Service.Switch(this.name);
     this.informationService = new hap.Service.AccessoryInformation()
-      .setCharacteristic(hap.Characteristic.Manufacturer, "Huawei");
+      .setCharacteristic(hap.Characteristic.Manufacturer, 'Huawei');
 
     this.informationService.getCharacteristic(hap.Characteristic.Model).on(hap.CharacteristicEventTypes.GET, async (callback) => {
-      
       const value = await this.mutex.runExclusive(async () => await this.getInfo('DeviceName'));
       callback(undefined, value);
     });
@@ -54,52 +55,72 @@ class Router implements AccessoryPlugin {
       callback(undefined, value);
     });
 
-    this.informationService.getCharacteristic(hap.Characteristic.SoftwareRevision).on(hap.CharacteristicEventTypes.GET, async (callback) => {
-      const value = await this.mutex.runExclusive(async () => await this.getInfo('SoftwareVersion'));
-      callback(undefined, value);
-    });
+    this.informationService.getCharacteristic(hap.Characteristic.FirmwareRevision)
+      .on(hap.CharacteristicEventTypes.GET, async (callback) => {
+        const value = await this.mutex.runExclusive(async () => await this.getInfo('SoftwareVersion'));
+        callback(undefined, value);
+      });
 
+    // On by default
     this.switchService.getCharacteristic(hap.Characteristic.On)
-    .on(hap.CharacteristicEventTypes.GET, callback => {
-      this.log.info("State of the router queried");
-      callback(undefined, this.device !== null);
-    })
-    .on(hap.CharacteristicEventTypes.SET, this.setSwitchState.bind(this));
+      .on(hap.CharacteristicEventTypes.GET, async (callback) => {
+        callback(undefined, await isOnline());
+      })
+      .on(hap.CharacteristicEventTypes.SET, this.setSwitchState.bind(this));
   }
 
-  setSwitchState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  async setSwitchState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const switchOn = value as boolean;
-    this.log.info("Router was turned " + (switchOn ? "ON": "OFF"));
+    this.log.debug(`Router turned ${switchOn ? 'ON': 'OFF'} by the user`);
 
-    if (!switchOn) {
-      // TODO: Restart the router
+    if (switchOn) {
+      this.switchService.updateCharacteristic(hap.Characteristic.On, await isOnline());
+    } else {
+      const device = await this.getDevice();
+
+      const response = await device.reboot();
+      this.log.debug('Reboot reponse: ', response);
+
+      this.device = null;
+      this.info = null;
+
+      const handle = setInterval(async () => {
+        this.log.debug('Ping...');
+        if (await isOnline({timeout: 9000})) {
+          this.switchService.updateCharacteristic(hap.Characteristic.On, true);
+          this.log.debug('Router back online');
+          clearInterval(handle);
+        }
+      }, 10000);
     }
-    
+
     callback();
   }
 
   async getDevice() {
     if (this.device === null) {
-      this.log.debug("Connecting to the device");
+      this.log.debug('Connecting with the router...');
       this.device = await connect(this.config.password);
-      this.log.debug("Connected");
+      this.log.debug('Connected!');
     }
-    
+
     return this.device;
   }
-  
+
   async getInfo(key: string) {
     if (this.info === null) {
-      this.log.debug("Fetching information");
-      this.info = await (await this.getDevice()).information();
-      this.log.debug("Information:", this.info);
+      const device = await this.getDevice();
+
+      this.log.debug('Fetching router info...');
+      this.info = await device.information();
+      this.log.debug('Router info fetched!');
     }
-    
+
     return this.info[key] as string;
   }
 
   identify(): void {
-    this.log("Identify");
+    this.log.debug('Identify');
   }
 
   getServices(): Service[] {
