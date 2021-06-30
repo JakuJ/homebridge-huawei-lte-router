@@ -44,3 +44,34 @@ export async function blacklist(connection: Connection, hostname: string, mac: s
     }
   }
 }
+
+export async function whitelist(connection: Connection, mac: string) {
+  const wlan = new WLan(connection);
+
+  const current = await wlan.multiMacfilterSettings() as any;
+
+  const currentList = current['Ssids']['Ssid'] as [Record<string, string>];
+  const firstWindow = currentList[0];
+
+  for(let i = 0; i <= 9; i++) {
+    const mac_key = `WifiMacFilterMac${i}`;
+    const hostname_key = `wifihostname${i}`;
+
+    const mac_field = firstWindow[mac_key];
+
+    if (mac_field) {
+      if (mac_field === mac) {
+        // clear this entry
+        firstWindow[mac_key] = '';
+        firstWindow[hostname_key] = '';
+
+        currentList[0] = firstWindow;
+
+        // @ts-ignore
+        await wlan.setMultiMacfilterSettings(currentList);
+
+        return;
+      }
+    }
+  }
+}
