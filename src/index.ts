@@ -9,8 +9,8 @@ import {
   Service,
 } from 'homebridge';
 
-import { Device } from 'huawei-lte-api';
-import { connect } from './router';
+import Connection, { Device } from 'huawei-lte-api';
+import { connect, reboot, blacklist } from './router';
 import isOnline from 'is-online';
 
 let hap: HAP;
@@ -26,7 +26,7 @@ class Router implements AccessoryPlugin {
   private readonly name: string;
   private readonly config: AccessoryConfig;
 
-  private device: Device | null = null;
+  private connection: Connection | null = null;
 
   private readonly switchService: Service;
   private informationService: Service;
@@ -57,12 +57,12 @@ class Router implements AccessoryPlugin {
     if (switchOn) {
       this.switchService.updateCharacteristic(hap.Characteristic.On, await isOnline());
     } else {
-      const device = await this.getDevice();
+      const connection = await this.getConnection();
 
-      const response = await device.reboot();
+      const response = await reboot(connection);
       this.log.debug('Reboot reponse: ', response);
 
-      this.device = null;
+      this.connection = null;
 
       const handle = setInterval(async () => {
         this.log.debug('Ping...');
@@ -77,14 +77,14 @@ class Router implements AccessoryPlugin {
     callback();
   }
 
-  async getDevice() {
-    if (this.device === null) {
+  async getConnection() {
+    if (this.connection === null) {
       this.log.debug('Connecting with the router...');
-      this.device = await connect(this.config.address, this.config.password);
+      this.connection = await connect(this.config.address, this.config.password);
       this.log.debug('Connected!');
     }
 
-    return this.device;
+    return this.connection;
   }
 
   identify(): void {
