@@ -6,16 +6,34 @@
     "type": "object",
     "properties": {
       "name": {
-        "title": "name",
+        "title": "Name",
         "type": "string",
         "required": true,
         "default": "Huawei LTE Router"
       },
+      "address": {
+        "title": "Router IP",
+        "type": "string",
+        "required": true,
+        "default": "192.168.8.1"
+      },
       "password": {
-        "title": "password",
+        "title": "Password",
         "type": "string",
         "required": true,
         "default": "admin"
+      },
+      "model": {
+        "title": "Model",
+        "type": "string",
+        "required": false,
+        "default": "LTE Router"
+      },
+      "serialNumber": {
+        "title": "Serial Number",
+        "type": "string",
+        "required": false,
+        "default": "Unknown"
       }
     }
   }
