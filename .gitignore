@@ -120,4 +120,4 @@ dist
 .pnp.*
 
 # custom test logic
-./test.js
+test.js

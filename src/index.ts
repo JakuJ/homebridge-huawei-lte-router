@@ -4,70 +4,88 @@ import {
   API,
   CharacteristicSetCallback,
   CharacteristicValue,
-  HAP,
   Logging,
   Service,
 } from 'homebridge';
 
-import Connection, { Device } from 'huawei-lte-api';
-import { connect, reboot, blacklist } from './router';
+import { getConnection, reboot, blacklist, whitelist, isBlocked } from './api';
 import isOnline from 'is-online';
-
-let hap: HAP;
+import { HAP } from 'homebridge/lib/api';
 
 export = async (api: API) => {
-  hap = api.hap;
   api.registerAccessory('Huawei LTE Router', Router);
 };
 
 class Router implements AccessoryPlugin {
 
   private readonly log: Logging;
-  private readonly name: string;
   private readonly config: AccessoryConfig;
-
-  private connection: Connection | null = null;
+  private readonly hap: HAP;
 
   private readonly switchService: Service;
+  private readonly accessSwitches: Service[] = [];
   private informationService: Service;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.config = config;
-    this.name = config.name;
+    const hap = this.hap = api.hap;
 
-    this.switchService = new hap.Service.Switch(this.name);
+    // Information service
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, 'Huawei')
       .setCharacteristic(hap.Characteristic.Model, this.config.model)
       .setCharacteristic(hap.Characteristic.SerialNumber, this.config.serialNumber);
 
+    // Router reset switch
+    this.switchService = new hap.Service.Switch('Reset', 'Main');
+
     this.switchService.getCharacteristic(hap.Characteristic.On)
       .on(hap.CharacteristicEventTypes.GET, async (callback) => {
         callback(undefined, await isOnline());
       })
-      .on(hap.CharacteristicEventTypes.SET, this.setSwitchState.bind(this));
+      .on(hap.CharacteristicEventTypes.SET, this.setResetSwitch.bind(this));
+
+    // Device access switches
+    for (const {hostname, mac} of this.config.devices) {
+      const _switch = new hap.Service.Switch(hostname, mac);
+
+      _switch.getCharacteristic(hap.Characteristic.On)
+        .on(hap.CharacteristicEventTypes.GET, async (callback) => {
+          const connection = await getConnection(this.config.address, this.config.password);
+          callback(undefined, !await isBlocked(connection, mac));
+        })
+        .on(hap.CharacteristicEventTypes.SET, async (value, callback) => {
+          await this.setAccessSwitch(hostname, mac, value);
+          callback(undefined);
+        });
+
+      this.accessSwitches.push(_switch);
+    }
   }
 
-  async setSwitchState(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  /**
+   * Handles flicking the reset switch.
+   * @param value     Whether the switch was turned on or off.
+   * @param callback  Callback provided by the API.
+   */
+  async setResetSwitch(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const switchOn = value as boolean;
     this.log.info(`Router turned ${switchOn ? 'ON': 'OFF'} by the user`);
 
     if (switchOn) {
-      this.switchService.updateCharacteristic(hap.Characteristic.On, await isOnline());
+      this.switchService.updateCharacteristic(this.hap.Characteristic.On, await isOnline());
     } else {
-      const connection = await this.getConnection();
+      const connection = await getConnection(this.config.address, this.config.password);
 
       const response = await reboot(connection);
       this.log.debug('Reboot reponse: ', response);
 
-      this.connection = null;
-
       const handle = setInterval(async () => {
         this.log.debug('Ping...');
         if (await isOnline({timeout: 9000})) {
-          this.switchService.updateCharacteristic(hap.Characteristic.On, true);
+          this.switchService.updateCharacteristic(this.hap.Characteristic.On, true);
           this.log.info('Router back online');
           clearInterval(handle);
         }
@@ -77,14 +95,24 @@ class Router implements AccessoryPlugin {
     callback();
   }
 
-  async getConnection() {
-    if (this.connection === null) {
-      this.log.debug('Connecting with the router...');
-      this.connection = await connect(this.config.address, this.config.password);
-      this.log.debug('Connected!');
-    }
+  /**
+   * Handles flicking the access switch for a device.
+   * @param hostname  Device hostname.
+   * @param mac       Device MAC address.
+   * @param value     Whether the switch was turned on or off.
+   * @param callback  Callback provided by the API.
+   */
+  async setAccessSwitch(hostname: string, mac:string, value: CharacteristicValue) {
+    const block = !(value as boolean);
+    this.log.info(`${hostname} was ${block ? 'blacklisted': 'whitelisted'} by the user`);
 
-    return this.connection;
+    const connection = await getConnection(this.config.address, this.config.password);
+
+    if (block) {
+      await blacklist(connection, hostname, mac);
+    } else {
+      await whitelist(connection, mac);
+    }
   }
 
   identify(): void {
@@ -95,6 +123,7 @@ class Router implements AccessoryPlugin {
     return [
       this.informationService,
       this.switchService,
+      ...this.accessSwitches,
     ];
   }
 

@@ -34,6 +34,25 @@
         "type": "string",
         "required": false,
         "default": "Unknown"
+      },
+      "devices": {
+        "type": "array",
+        "items": {
+          "title": "Devices",
+          "type": "object",
+          "properties": {
+            "hostname": {
+              "title": "Hostname",
+              "type": "string",
+              "required": true
+            },
+            "mac": {
+              "title": "MAC address",
+              "type": "string",
+              "required": true
+            }
+          }
+        }
       }
     }
   }
