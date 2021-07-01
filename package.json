@@ -1,16 +1,15 @@
 {
-  "private": true,
-  "displayName": "Homebridge Huawei LTE Router",
-  "name": "homebridge-plugin-huawei-lte-router",
+  "displayName": "Homebridge Huawei LTE Router Plugin",
+  "name": "homebridge-huawei-lte-router",
   "version": "1.0.0",
   "description": "A Homebridge plugin for automating Huawei LTE routers.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/JakuJ/homebridge-plugin-huawei-lte-router.git"
+    "url": "git://github.com/JakuJ/homebridge-huawei-lte-router.git"
   },
   "bugs": {
-    "url": "https://github.com/JakuJ/homebridge-plugin-huawei-lte-router/issues"
+    "url": "https://github.com/JakuJ/homebridge-huawei-lte-router/issues"
   },
   "engines": {
     "node": ">=10.17.0",
