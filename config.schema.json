@@ -1,7 +1,6 @@
 {
   "pluginAlias": "Huawei LTE Router",
   "pluginType": "accessory",
-  "singular": true,
   "schema": {
     "type": "object",
     "properties": {
@@ -37,6 +36,7 @@
       },
       "devices": {
         "type": "array",
+        "required": false,
         "items": {
           "title": "Devices",
           "type": "object",

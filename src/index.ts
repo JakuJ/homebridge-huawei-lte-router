@@ -35,8 +35,8 @@ class Router implements AccessoryPlugin {
     // Information service
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, 'Huawei')
-      .setCharacteristic(hap.Characteristic.Model, this.config.model)
-      .setCharacteristic(hap.Characteristic.SerialNumber, this.config.serialNumber);
+      .setCharacteristic(hap.Characteristic.Model, this.config.model || 'LTE Router')
+      .setCharacteristic(hap.Characteristic.SerialNumber, this.config.serialNumber || 'Unknown');
 
     // Router reset switch
     this.switchService = new hap.Service.Switch('Reset', 'Main');
@@ -48,7 +48,7 @@ class Router implements AccessoryPlugin {
       .on(hap.CharacteristicEventTypes.SET, this.setResetSwitch.bind(this));
 
     // Device access switches
-    for (const {hostname, mac} of this.config.devices) {
+    for (const {hostname, mac} of this.config.devices || []) {
       const _switch = new hap.Service.Switch(hostname, mac);
 
       _switch.getCharacteristic(hap.Characteristic.On)
@@ -72,7 +72,7 @@ class Router implements AccessoryPlugin {
    */
   async setResetSwitch(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const switchOn = value as boolean;
-    this.log.info(`Router turned ${switchOn ? 'ON': 'OFF'} by the user`);
+    this.log.info(`Router turned ${switchOn ? 'ON': 'OFF'}`);
 
     if (switchOn) {
       this.switchService.updateCharacteristic(this.hap.Characteristic.On, await isOnline());
@@ -104,7 +104,7 @@ class Router implements AccessoryPlugin {
    */
   async setAccessSwitch(hostname: string, mac:string, value: CharacteristicValue) {
     const block = !(value as boolean);
-    this.log.info(`${hostname} was ${block ? 'blacklisted': 'whitelisted'} by the user`);
+    this.log.info(`${hostname} was ${block ? 'blacklisted': 'whitelisted'}`);
 
     const connection = await getConnection(this.config.address, this.config.password);
 

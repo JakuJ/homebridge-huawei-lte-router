@@ -26,12 +26,12 @@ export async function reboot(connection: Connection) {
   await device.reboot();
 }
 
-async function safely(fun: any, args: any[]) {
+async function safely(fun: any, args: any) {
   try{
     return await fun(...args);
   } catch {
     connection = null;
-    const [_, ...other] = args;
+    const [, ...other] = args;
     return await fun(await getConnection(cachedAddress, cachedPassword), ...other);
   }
 }
