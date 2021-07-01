@@ -1,7 +1,7 @@
 {
-  "displayName": "Homebridge Huawei LTE Router Plugin",
+  "displayName": "Homebridge Huawei LTE Router",
   "name": "@jakuj/homebridge-huawei-lte-router",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Homebridge plugin for automating Huawei LTE routers.",
   "license": "Apache-2.0",
   "publishConfig": {
