@@ -7,10 +7,10 @@ import {
   Logging,
   Service,
 } from 'homebridge';
-
-import { setupApi, reboot, blacklist, whitelist, isBlocked } from './api';
-import isOnline from 'is-online';
 import { HAP } from 'homebridge/lib/api';
+import isOnline from 'is-online';
+import HuaweiApi from './api';
+
 
 export = async (api: API) => {
   api.registerAccessory('Huawei LTE Router', Router);
@@ -21,18 +21,18 @@ class Router implements AccessoryPlugin {
   private readonly log: Logging;
   private readonly config: AccessoryConfig;
   private readonly hap: HAP;
+  private readonly huawei: HuaweiApi;
 
   private readonly switchService: Service;
   private readonly accessSwitches: Service[] = [];
   private informationService: Service;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.config = config;
-    const hap = this.hap = api.hap;
+    this.huawei = new HuaweiApi((msg) => this.log.info(msg), this.config.address, this.config.password);
 
-    setupApi((msg) => this.log.info(msg), this.config.address, this.config.password);
+    const hap = this.hap = api.hap;
 
     // Information service
     this.informationService = new hap.Service.AccessoryInformation()
@@ -55,7 +55,7 @@ class Router implements AccessoryPlugin {
 
       _switch.getCharacteristic(hap.Characteristic.On)
         .on(hap.CharacteristicEventTypes.GET, async (callback) => {
-          callback(undefined, !await isBlocked(mac));
+          callback(undefined, !await this.huawei.isBlocked(mac));
         })
         .on(hap.CharacteristicEventTypes.SET, async (value, callback) => {
           await this.setAccessSwitch(hostname, mac, value);
@@ -66,11 +66,6 @@ class Router implements AccessoryPlugin {
     }
   }
 
-  /**
-   * Handles flicking the reset switch.
-   * @param value     Whether the switch was turned on or off.
-   * @param callback  Callback provided by the API.
-   */
   async setResetSwitch(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const switchOn = value as boolean;
     this.log.info(`Router turned ${switchOn ? 'ON': 'OFF'}`);
@@ -78,7 +73,7 @@ class Router implements AccessoryPlugin {
     if (switchOn) {
       this.switchService.updateCharacteristic(this.hap.Characteristic.On, await isOnline());
     } else {
-      const response = await reboot();
+      const response = await this.huawei.reboot();
       this.log.debug('Reboot reponse: ', response);
 
       const handle = setInterval(async () => {
@@ -94,20 +89,13 @@ class Router implements AccessoryPlugin {
     callback();
   }
 
-  /**
-   * Handles flicking the access switch for a device.
-   * @param hostname  Device hostname.
-   * @param mac       Device MAC address.
-   * @param value     Whether the switch was turned on or off.
-   * @param callback  Callback provided by the API.
-   */
   async setAccessSwitch(hostname: string, mac:string, value: CharacteristicValue) {
     const block = !(value as boolean);
 
     if (block) {
-      await blacklist(hostname, mac);
+      await this.huawei.blacklist(hostname, mac);
     } else {
-      await whitelist(mac);
+      await this.huawei.whitelist(mac);
     }
   }
 

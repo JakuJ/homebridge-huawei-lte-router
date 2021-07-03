@@ -16,7 +16,8 @@
     "strict": true,
     "esModuleInterop": true,
     "noImplicitAny": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "experimentalDecorators": true
   },
   "include": [
     "src/"

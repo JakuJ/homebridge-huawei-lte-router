@@ -18,7 +18,9 @@ Only really tested on a B535-232, but should work with every device that [this A
 
 ## Installation
 - Install Homebridge (e.g. using `npm install -g homebridge`)
-- Install this plugin (e.g. using `npm install @jakuj/homebridge-huawei-lte-router`)
+- Install this plugin:
+  -  from NPM: `npm install homebridge-huawei-lte-router`
+  -  manually: download the newest release -> `npm install` -> `npm run build` -> `npm link`
 - Configure the plugin settings through config.json or web UI (see below for the options)
 
 ## Example config
