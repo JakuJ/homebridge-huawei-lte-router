@@ -65,9 +65,9 @@ Only really tested on a B535-232, but should work with every device that [this A
 
 ## Testing
 
-Want to run unit tests? Great, just:
+Want to run the test suite?
 
-1. Get yourself a Huawei LTE router
+1. Get a Huawei LTE router
 2. Create a `test_secrets.json` file in the root of the repository. Refer to [the test file](src/api.spec.ts) to see which properties must be supplied for the tests to work.
 3. Run `npm test`
 
@@ -77,4 +77,3 @@ Want to run unit tests? Great, just:
 You are free to submit pull requests to this repository.
 
 For information on how to develop Homebridge plugins, refer to the [template repository](https://github.com/homebridge/homebridge-plugin-template).
-
