@@ -1,5 +1,7 @@
 import { Mutex } from 'async-mutex';
+import { Logger } from 'homebridge';
 import { Connection, Device, WLan } from 'huawei-lte-api';
+import {SsidFrame, FilterReponse} from './types';
 
 const mutex: Mutex = new Mutex();
 
@@ -14,19 +16,36 @@ function exclusively (target: any, key: string | symbol, descriptor: PropertyDes
 }
 
 export default class HuaweiApi {
-  private readonly log: (message: string) => void;
+  private readonly log: Logger;
   private readonly url: string;
 
-  constructor(log: (message: string) => void, address: string, password: string) {
+  constructor(log: Logger, address: string, password: string) {
     this.log = log;
     this.url = `http://admin:${password}@${address}`;
   }
 
-  async refreshConnection() {
+  // Private methods
+
+  private async refreshConnection() {
     const connection = new Connection(this.url, 5000);
     await connection.ready;
     return connection;
   }
+
+  private async getMacFilter(connection: Connection) {
+    const wlan = new WLan(connection);
+    const response = await wlan.multiMacfilterSettings() as FilterReponse;
+    return response.Ssids.Ssid[0];
+  }
+
+  private macBlocked(record: SsidFrame, mac: string) {
+    return Object.entries(record)
+      .filter(([k]) => k.startsWith('WifiMacFilterMac'))
+      .map(([, v]) => v)
+      .includes(mac);
+  }
+
+  // Public methods
 
   @exclusively
   async reboot() {
@@ -38,96 +57,88 @@ export default class HuaweiApi {
   @exclusively
   async isBlocked(mac: string) {
     const connection = await this.refreshConnection();
-    const wlan = new WLan(connection);
-
-    const current = await wlan.multiMacfilterSettings() as any;
-
-    const currentList = current['Ssids']['Ssid'] as Record<string, string>[];
-    const firstWindow = currentList[0];
-
-    for (let i = 0; i <= 9; i++) {
-      const mac_key = `WifiMacFilterMac${i}`;
-      const mac_field = firstWindow[mac_key];
-
-      if (mac_field === mac) {
-        return true;
-      }
-    }
-    return false;
+    const frame = await this.getMacFilter(connection);
+    return this.macBlocked(frame, mac);
   }
 
   @exclusively
   async blacklist(hostname: string, mac: string) {
     const connection = await this.refreshConnection();
+    const frame = await this.getMacFilter(connection);
+
+    if (this.macBlocked(frame, mac)) {
+      this.log.warn(`Blacklist: ${hostname} (${mac}) already blocked`);
+      return;
+    }
+
+    // Update the record to block another device
+    let firstEmpty =
+      Object.entries(frame)
+        .filter(([k, v]) => k.startsWith('WifiMacFilterMac') && !v)
+        .map(([k]) => Number.parseInt(k.slice('WifiMacFilterMac'.length)))
+        .reduce((a, b) => a <= b ? a : b, 10);
+
+    // 10 is a magic number that will never occur in the response
+    if (firstEmpty === 10) {
+      firstEmpty = 0;
+    }
+
+    frame[`wifihostname${firstEmpty}`] = hostname;
+    frame[`WifiMacFilterMac${firstEmpty}`] = mac;
+
+    // Send payload
+
     const wlan = new WLan(connection);
 
-    const current = await wlan.multiMacfilterSettings() as any;
+    try {
+      // @ts-ignore
+      await wlan.setMultiMacfilterSettings([frame]);
 
-    const currentList = current['Ssids']['Ssid'] as Record<string, string>[];
-    const firstWindow = currentList[0];
-
-    for(let i = 0; i <= 9; i++) {
-      const mac_key = `WifiMacFilterMac${i}`;
-      const hostname_key = `wifihostname${i}`;
-
-      const mac_field = firstWindow[mac_key];
-
-      if (mac_field) {
-        if (mac_field === mac) {
-          this.log(`Blacklist: ${hostname} (${mac}) already blocked`);
-          return;
-        }
-        continue;
-      } else {
-        // this is the free spot
-        firstWindow[mac_key] = mac;
-        firstWindow[hostname_key] = hostname;
-
-        currentList[0] = firstWindow;
-
-        // @ts-ignore
-        await wlan.setMultiMacfilterSettings(currentList);
-
-        this.log(`${hostname} (${mac}) added to blacklist`);
-        return;
-      }
+      this.log.info(`${hostname} (${mac}) added to blacklist`);
+    } catch (error) {
+      this.log.warn(`Couldn't blacklist ${hostname} (${mac})`);
     }
   }
 
   @exclusively
   async whitelist(mac: string) {
     const connection = await this.refreshConnection();
-    const wlan = new WLan(connection);
+    const frame = await this.getMacFilter(connection);
 
-    const current = await wlan.multiMacfilterSettings() as any;
-
-    const currentList = current['Ssids']['Ssid'] as Record<string, string>[];
-    const firstWindow = currentList[0];
+    if (!this.macBlocked(frame, mac)) {
+      this.log.warn(`Whitelist: ${mac} is not blacklisted`);
+      return;
+    }
 
     for(let i = 0; i <= 9; i++) {
       const mac_key = `WifiMacFilterMac${i}`;
       const hostname_key = `wifihostname${i}`;
 
-      const mac_field = firstWindow[mac_key];
-      const hostname_field = firstWindow[hostname_key];
+      const mac_field = frame[mac_key];
+      const hostname_field = frame[hostname_key];
 
       if (mac_field) {
         if (mac_field === mac) {
-        // clear this entry
-          firstWindow[mac_key] = '';
-          firstWindow[hostname_key] = '';
+          // clear this entry
+          frame[mac_key] = '';
+          frame[hostname_key] = '';
 
-          currentList[0] = firstWindow;
+          // entries further up must be moved down a place
+          for (let j = i + 1; j <= 9; j++) {
+            frame[`wifihostname${j - 1}`] = frame[`wifihostname${j}`];
+            frame[`WifiMacFilterMac${j - 1}`] = frame[`WifiMacFilterMac${j}`];
+          }
+
+          // send the payload
+          const wlan = new WLan(connection);
 
           // @ts-ignore
-          await wlan.setMultiMacfilterSettings(currentList);
+          await wlan.setMultiMacfilterSettings([frame]);
 
-          this.log(`${hostname_field} (${mac}) removed from blacklist`);
+          this.log.info(`${hostname_field} (${mac}) removed from blacklist`);
           return;
         }
       }
     }
-
-    this.log('Whitelist: Nothing to be done');
   }
 }

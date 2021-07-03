@@ -119,5 +119,5 @@ dist
 .yarn/build-state.yml
 .pnp.*
 
-# custom test logic
-test.js
+# mocha secrets
+test_secrets.json

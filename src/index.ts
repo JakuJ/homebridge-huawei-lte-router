@@ -30,7 +30,7 @@ class Router implements AccessoryPlugin {
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.config = config;
-    this.huawei = new HuaweiApi((msg) => this.log.info(msg), this.config.address, this.config.password);
+    this.huawei = new HuaweiApi(this.log, this.config.address, this.config.password);
 
     const hap = this.hap = api.hap;
 
@@ -45,17 +45,33 @@ class Router implements AccessoryPlugin {
 
     this.switchService.getCharacteristic(hap.Characteristic.On)
       .on(hap.CharacteristicEventTypes.GET, async (callback) => {
-        callback(undefined, await isOnline());
+        // Return early, assuming that the router is ON
+        callback(undefined, true);
+
+        // Update the state eventually
+        this.switchService.updateCharacteristic(hap.Characteristic.On, await isOnline());
       })
       .on(hap.CharacteristicEventTypes.SET, this.setResetSwitch.bind(this));
 
     // Device access switches
     for (const {hostname, mac} of this.config.devices || []) {
+      // Validate input
+      const mac_regex = /[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]/;
+
+      if (!mac_regex.exec(mac)) {
+        this.log.warn(`MAC address ${mac} is invalid, switch will not be created`);
+        continue;
+      }
+
       const _switch = new hap.Service.Switch(hostname, mac);
 
       _switch.getCharacteristic(hap.Characteristic.On)
         .on(hap.CharacteristicEventTypes.GET, async (callback) => {
-          callback(undefined, !await this.huawei.isBlocked(mac));
+          // Return early, assuming that the device is whitelisted
+          callback(undefined, true);
+
+          // Update the state eventually
+          _switch.updateCharacteristic(hap.Characteristic.On, !await this.huawei.isBlocked(mac));
         })
         .on(hap.CharacteristicEventTypes.SET, async (value, callback) => {
           await this.setAccessSwitch(hostname, mac, value);

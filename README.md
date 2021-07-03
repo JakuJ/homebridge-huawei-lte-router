@@ -61,10 +61,20 @@ Only really tested on a B535-232, but should work with every device that [this A
     - `mac` (required) is the MAC address of the corresponding device
 
 
-**NOTE**: (at least on B535-232) Specifying a device with a MAC address that has never been seen by the router will crash the plugin :wink:
+**NOTE**: (at least on B535-232) Specifying an access switch for a device with a MAC address that has never been seen by the router will cause the router to reject any requests to blacklist that device.
+
+## Testing
+
+Want to run unit tests? Great, just:
+
+1. Get yourself a Huawei LTE router
+2. Create a `test_secrets.json` file in the root of the repository. Refer to [the test file](src/api.spec.ts) to see which properties must be supplied for the tests to work.
+3. Run `npm test`
+
 
 ## Contributing
 
 You are free to submit pull requests to this repository.
 
 For information on how to develop Homebridge plugins, refer to the [template repository](https://github.com/homebridge/homebridge-plugin-template).
+
