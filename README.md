@@ -31,9 +31,9 @@ Only really tested on a B535-232, but should work with every device that [this A
         "accessory": "Huawei LTE Router",
         "name": "My LTE Router",
         "address": "192.168.8.1",
-        "password": "<your password>",
+        "password": "#REDACTED",
         "model": "B535-232",
-        "serialNumber": "<your serial number>",
+        "serialNumber": "#REDACTED",
         "devices": [
             {
                 "name": "Some device",
