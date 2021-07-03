@@ -30,34 +30,34 @@ Only really tested on a B535-232, but should work with every device that [this A
     {
         "accessory": "Huawei LTE Router",
         "name": "My LTE Router",
-        "address": "192.168.8.1",
+        "ip": "192.168.8.1",
         "password": "#REDACTED",
         "model": "B535-232",
         "serialNumber": "#REDACTED",
-        "devices": [
+        "accessSwitches": [
             {
-                "name": "Some device",
+                "hostname": "Some device",
                 "mac": "11:22:33:44:55:66"
             },
             {
-                "name": "Some other device",
+                "hostname": "Some other device",
                 "mac": "77:88:99:AA:BB:CC"
             }
         ]
     }
-],
+]
 ```
 
 **Required fields:**
 - `name` is the name of your router as it appears in HomeKit
-- `address` is the IP address of the router
+- `ip` is the IP address of the router
 - `password` is the router's password, the same as for its web interface
 
 **Optional fields:**
 - `model` is the router's model as it appears in HomeKit
 - `serialNumber` is the router's serial number as it appears in HomeKit
-- `devices` is a list of names and MAC addresses. For each, a switch will be created, that allows you to turn this device's access to the internet on and off.
-    - `name` (required) is the name of the switch as it appears in Homekit.
+- `accessSwitches` is a list of hostnames and MAC addresses. For each, a switch will be created, that allows you to turn this device's access to the internet on and off.
+    - `hostname` (required) is the name of the switch as it appears in Homekit and your router's device list.
     - `mac` (required) is the MAC address of the corresponding device
 
 

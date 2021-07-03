@@ -30,7 +30,7 @@ class Router implements AccessoryPlugin {
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.log = log;
     this.config = config;
-    this.huawei = new HuaweiApi(this.log, this.config.address, this.config.password);
+    this.huawei = new HuaweiApi(this.log, this.config.ip, this.config.password);
 
     const hap = this.hap = api.hap;
 
@@ -54,15 +54,7 @@ class Router implements AccessoryPlugin {
       .on(hap.CharacteristicEventTypes.SET, this.setResetSwitch.bind(this));
 
     // Device access switches
-    for (const {hostname, mac} of this.config.devices || []) {
-      // Validate input
-      const mac_regex = /[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]:[\dA-F][\dA-F]/;
-
-      if (!mac_regex.exec(mac)) {
-        this.log.warn(`MAC address ${mac} is invalid, switch will not be created`);
-        continue;
-      }
-
+    for (const {hostname, mac} of this.config.accessSwitches || []) {
       const _switch = new hap.Service.Switch(hostname, mac);
 
       _switch.getCharacteristic(hap.Characteristic.On)

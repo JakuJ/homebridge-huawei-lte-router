@@ -1,6 +1,7 @@
 {
   "pluginAlias": "Huawei LTE Router",
   "pluginType": "accessory",
+  "singular": false,
   "schema": {
     "type": "object",
     "properties": {
@@ -10,11 +11,12 @@
         "required": true,
         "default": "Huawei LTE Router"
       },
-      "address": {
+      "ip": {
         "title": "Router IP",
         "type": "string",
         "required": true,
-        "default": "192.168.8.1"
+        "default": "192.168.8.1",
+        "format": "ipv4"
       },
       "password": {
         "title": "Password",
@@ -34,22 +36,24 @@
         "required": false,
         "default": "Unknown"
       },
-      "devices": {
+      "accessSwitches": {
         "type": "array",
         "required": false,
         "items": {
-          "title": "Devices",
+          "title": "Access Switch",
           "type": "object",
           "properties": {
             "hostname": {
               "title": "Hostname",
               "type": "string",
-              "required": true
+              "required": true,
+              "format": "hostname"
             },
             "mac": {
               "title": "MAC address",
               "type": "string",
-              "required": true
+              "required": true,
+              "pattern": "^([\\dA-Fa-f][\\dA-Fa-f]:){5}[\\dA-Fa-f][\\dA-Fa-f]$"
             }
           }
         }
