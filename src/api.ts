@@ -34,10 +34,8 @@ export async function whitelist(mac: string) {
 const mutex = new Mutex();
 
 async function refreshConnection() {
-  _log('Establishing a connection...');
   _connection = new Connection(_url, 5000);
   await _connection.ready;
-  _log('Done');
   return _connection;
 }
 
@@ -75,8 +73,6 @@ async function _isBlocked(mac: string) {
 }
 
 async function _blacklist(hostname: string, mac: string) {
-  _log(`Blacklist: Running for ${hostname} (${mac})`);
-
   const wlan = new WLan(_connection);
 
   const current = await wlan.multiMacfilterSettings() as any;
@@ -105,17 +101,13 @@ async function _blacklist(hostname: string, mac: string) {
 
       // @ts-ignore
       await wlan.setMultiMacfilterSettings(currentList);
-      _log(`Blacklist: ${hostname} (${mac}) added to blacklist`);
+      _log(`${hostname} (${mac}) added to blacklist`);
       return;
     }
   }
-
-  _log('Blacklist: Nothing to be done');
 }
 
 async function _whitelist(mac: string) {
-  _log(`Whitelist: Running for MAC ${mac}`);
-
   const wlan = new WLan(_connection);
 
   const current = await wlan.multiMacfilterSettings() as any;
@@ -140,7 +132,7 @@ async function _whitelist(mac: string) {
 
         // @ts-ignore
         await wlan.setMultiMacfilterSettings(currentList);
-        _log(`Whitelist: ${hostname_field} (${mac}) removed from blacklist`);
+        _log(`${hostname_field} (${mac}) removed from blacklist`);
         return;
       }
     }

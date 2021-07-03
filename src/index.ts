@@ -32,7 +32,7 @@ class Router implements AccessoryPlugin {
     this.config = config;
     const hap = this.hap = api.hap;
 
-    setupApi(this.log.debug, this.config.address, this.config.password);
+    setupApi((msg) => this.log.info(msg), this.config.address, this.config.password);
 
     // Information service
     this.informationService = new hap.Service.AccessoryInformation()
@@ -103,7 +103,6 @@ class Router implements AccessoryPlugin {
    */
   async setAccessSwitch(hostname: string, mac:string, value: CharacteristicValue) {
     const block = !(value as boolean);
-    this.log.info(`${hostname} was ${block ? 'blacklisted': 'whitelisted'}`);
 
     if (block) {
       await blacklist(hostname, mac);
