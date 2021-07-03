@@ -134,5 +134,6 @@ dist
 .yarn/build-state.yml
 .pnp.*
 
-# Test secrets
+# Test files
+.mocharc.json
 test_secrets.json
