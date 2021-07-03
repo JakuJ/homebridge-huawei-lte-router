@@ -8,7 +8,7 @@ import {
   Service,
 } from 'homebridge';
 
-import { getConnection, reboot, blacklist, whitelist, isBlocked } from './api';
+import { setupApi, reboot, blacklist, whitelist, isBlocked } from './api';
 import isOnline from 'is-online';
 import { HAP } from 'homebridge/lib/api';
 
@@ -32,6 +32,8 @@ class Router implements AccessoryPlugin {
     this.config = config;
     const hap = this.hap = api.hap;
 
+    setupApi(this.log.debug, this.config.address, this.config.password);
+
     // Information service
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, 'Huawei')
@@ -53,8 +55,7 @@ class Router implements AccessoryPlugin {
 
       _switch.getCharacteristic(hap.Characteristic.On)
         .on(hap.CharacteristicEventTypes.GET, async (callback) => {
-          const connection = await getConnection(this.config.address, this.config.password);
-          callback(undefined, !await isBlocked(connection, mac));
+          callback(undefined, !await isBlocked(mac));
         })
         .on(hap.CharacteristicEventTypes.SET, async (value, callback) => {
           await this.setAccessSwitch(hostname, mac, value);
@@ -77,9 +78,7 @@ class Router implements AccessoryPlugin {
     if (switchOn) {
       this.switchService.updateCharacteristic(this.hap.Characteristic.On, await isOnline());
     } else {
-      const connection = await getConnection(this.config.address, this.config.password);
-
-      const response = await reboot(connection);
+      const response = await reboot();
       this.log.debug('Reboot reponse: ', response);
 
       const handle = setInterval(async () => {
@@ -106,12 +105,10 @@ class Router implements AccessoryPlugin {
     const block = !(value as boolean);
     this.log.info(`${hostname} was ${block ? 'blacklisted': 'whitelisted'}`);
 
-    const connection = await getConnection(this.config.address, this.config.password);
-
     if (block) {
-      await blacklist(connection, hostname, mac);
+      await blacklist(hostname, mac);
     } else {
-      await whitelist(connection, mac);
+      await whitelist(mac);
     }
   }
 
